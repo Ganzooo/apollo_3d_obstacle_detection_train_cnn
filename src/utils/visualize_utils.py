@@ -16,7 +16,7 @@ import torch
 from torchviz import make_dot
 
 sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
-from pytorch.BCNN import BCNN  # noqa
+from models.BCNN import BCNN  # noqa
 
 try:
     import cv2

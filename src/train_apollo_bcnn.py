@@ -14,14 +14,14 @@ import tqdm
 import visdom
 from datetime import datetime
 
-from BCNN import BCNN
-from BcnnLoss import BcnnLoss
-from BcnnLossNew import BcnnLossNew
-from NuscData import load_dataset
+sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
+
+from dataset.NuscData import load_dataset
 from optimizers import get_optimizer
 from schedulers import get_scheduler
+from loss import get_loss_function
+from models.BCNN import BCNN
 
-sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 from utils.visualize_utils import get_arrow_image, get_class_image, get_category_or_confidence_image, get_input_feature_image  # noqa
 from utils.utils import get_logger
 from icecream import ic
@@ -74,7 +74,7 @@ class Trainer(object):
             self.vis = visdom.Visdom()
             self.vis_interval = 1
 
-        self.logdir = osp.join("cur", work_dir)
+        self.logdir = osp.join("./", work_dir)
         self.logger = get_logger(self.logdir)
         self.logger.info("Let the train begin...")
 
@@ -113,7 +113,7 @@ class Trainer(object):
             self.optimizer.load_state_dict(checkpoint["optimizer_state"])
             self.scheduler.load_state_dict(checkpoint["scheduler_state"])
             self.start_epo = checkpoint["scheduler_state"]["last_epoch"]
-            self.logger.info("Loaded checkpoint '{}' (iter {})".format(resume_train, checkpoint["epoch"]))
+            self.logger.info("Loaded checkpoint '{}' (epoch {})".format(resume_train, self.start_epo))
         else:
             self.logger.info("No checkpoint found at '{}'".format(resume_train))
 
@@ -292,13 +292,15 @@ class Trainer(object):
         heading_y_loss_sum = 0
         height_loss_sum = 0
 
+        criterion = get_loss_function('BcnnLoss').to(self.device)
         for index, (in_feature, out_feature_gt) in tqdm.tqdm(enumerate(dataloader), total=len(dataloader),
                 desc='{} epoch={}'.format(mode, self.epo), leave=True):
 
             category_weight, confidence_weight, class_weight = self.criteria_weight(out_feature_gt)
             
 
-            criterion = BcnnLoss().to(self.device)
+            criterion = criterion.to(self.device)
+            #creterion = get_loss_function
             #criterion = BcnnLossNew().to(self.device)
             in_feature = in_feature.to(self.device)
             out_feature_gt = out_feature_gt.to(self.device)
@@ -370,14 +372,11 @@ class Trainer(object):
             avg_height_loss = height_loss_sum
         
         if np.mod(index, self.loss_print_interval) == 0:
-            format_str = "epoch: {:3f}, total loss: {:3f}, category_loss: {:.3f}, confidence_loss: {:.3f}, class_loss:{:.3f}, \
-            instace_x_loss:{:.3f}, instace_y_loss={:.3f}, heading_x_loss={:.3f}, heading_y_loss={:.3f}, height_loss={:.3f}"
-            print_str = format_str.format(float(self.epo) ,float(avg_loss),float(avg_category_loss),float(avg_confidence_loss),float(avg_class_loss), \
+            format_str = "epoch: {}\n total loss: {:3f}, category_loss: {:.3f}, confidence_loss: {:.3f}, class_loss:{:.3f}, instace_x_loss:{:.3f}, instace_y_loss={:.3f}, heading_x_loss={:.3f}, heading_y_loss={:.3f}, height_loss={:.3f}"
+            print_str = format_str.format(int(self.epo) ,float(avg_loss),float(avg_category_loss),float(avg_confidence_loss),float(avg_class_loss), \
                 float(avg_instance_x_loss), float(avg_instance_y_loss), float(avg_heading_x_loss), float(avg_heading_y_loss), float(avg_height_loss))
             ic(print_str)
             self.logger.info(print_str)
-
-        
 
         if mode == 'val':
             _state = {
@@ -423,7 +422,7 @@ if __name__ == "__main__":
                         default=300)
     parser.add_argument('--pretrained_model', '-p', type=str,
                         help='Pretrained model path',
-                        default='checkpoints/bcnn_latestmodel_20210607_0809.pt')
+                        default='./checkpoints/bcnn_latestmodel_20210607_0809.pt')
     parser.add_argument('--train_data_num', '-tn', type=int,
                         help='Number of data used for training. Larger number if all data are used.',
                         default=1000000)
@@ -447,11 +446,11 @@ if __name__ == "__main__":
                         default=1)
     parser.add_argument('--resume', type=str,
                         help='Train process resume cur/bcnn_latestmodel.pt',
-                        default='/workspace/NETWORK/train_baiducnn/cur/bcnn/bcnn_latestmodel_0628.pt')
+                        default='./cur/bcnn/bcnn_latestmodel_0628.pt')
                         #default=None)
     parser.add_argument('--work_dir', type=str,
                         help='Work directory cur/bcnn',
-                        default='bcnn')
+                        default='./cur/bcnn')
 
     args = parser.parse_args()
     

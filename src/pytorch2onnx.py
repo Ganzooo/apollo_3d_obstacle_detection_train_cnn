@@ -26,7 +26,7 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--trained_model', '-tm', type=str,
                         help='trained model',
-                        default='/workspace/NETWORK/train_baiducnn/cur/bcnn/bcnn_latestmodel_0628.pt')
+                        default='./cur/bcnn/bcnn_latestmodel_0628.pt')
     parser.add_argument('--width', type=int,
                         help='feature map width',
                         default=864)

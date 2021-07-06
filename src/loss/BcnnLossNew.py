@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
-
 import math
 
 import torch
 from torch.nn import Module
-
 
 class BcnnLossNew(Module):
     """Loss function"""
