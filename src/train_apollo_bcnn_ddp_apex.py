@@ -4,6 +4,17 @@
 import argparse
 import os.path as osp
 import sys
+import os
+from apex.amp.handle import scale_loss
+
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.distributed as dist
+
+import apex
+from apex.parallel import DistributedDataParallel as DDP
+from apex.fp16_utils import *
+from apex import amp, optimizers
 
 import gdown
 import numpy as np
@@ -65,7 +76,7 @@ class Trainer(object):
                  width, height, use_constant_feature, use_intensity_feature, vis_on, resume_train, work_dir):
 
         self.train_dataloader, self.val_dataloader \
-            = load_dataset(data_path, batch_size, 0)
+            = load_dataset(data_path, batch_size, args.distributed)
         self.max_epoch = max_epoch
         self.time_now = datetime.now().strftime('%Y%m%d_%H%M')
         self.best_loss = 1e10
@@ -90,14 +101,26 @@ class Trainer(object):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = BCNN(in_channels=self.in_channels, n_class=5).to(self.device)
-        self.model = torch.nn.DataParallel(self.model, device_ids=range(torch.cuda.device_count()))  # multi gpu
+        #self.model = torch.nn.DataParallel(self.model, device_ids=range(torch.cuda.device_count()))  # multi gpu
         self.model.apply(weights_init)
-
-        self.save_model_interval = 1
-        self.loss_print_interval = 1
 
         self.optimizer = get_optimizer("SGD", self.model)
         self.scheduler = get_scheduler('LambdaLR', self.optimizer, self.max_epoch)
+
+        self.model, self.optimizer = amp.initialize(self.model, self.optimizer,
+                                      opt_level=args.opt_level,
+                                      keep_batchnorm_fp32=args.keep_batchnorm_fp32,
+                                      loss_scale=args.loss_scale)
+
+        if args.distributed:
+        # By default, apex.parallel.DistributedDataParallel overlaps communication with
+        # computation in the backward pass.
+        # model = DDP(model)
+        # delay_allreduce delays all communication to the end of the backward pass.
+            model = DDP(self.model, delay_allreduce=True)
+
+        self.save_model_interval = 1
+        self.loss_print_interval = 1
 
         total_params = sum(p.numel() for p in self.model.parameters())
         #print( 'Parameters:',total_params )
@@ -278,6 +301,8 @@ class Trainer(object):
         if mode == 'train':
             self.model.train()
             dataloader = self.train_dataloader
+            
+
         elif mode == 'val':
             self.model.eval()
             dataloader = self.val_dataloader
@@ -318,9 +343,11 @@ class Trainer(object):
                    + heading_x_loss + heading_y_loss) * 1.0 + height_loss
 
             if mode == 'train':
-                self.optimizer.zero_grad()
-                loss.backward()
+                with amp.scale_loss(loss, self.optimizer) as scaled_loss:
+                    scaled_loss.backward()
+                #loss.backward()
                 self.optimizer.step()
+                self.optimizer.zero_grad()
 
             if self.vis_on and np.mod(index, self.vis_interval) == 0:
                 self.result_visualization(out_feature_gt, output, in_feature, index, mode, dataloader)
@@ -465,12 +492,28 @@ def parse():
     return args
 
 if __name__ == "__main__":
+    global best_prec1, args
     args = parse()
-    
+
     ic.configureOutput(prefix='CNN training |')
     ic.enable()
     #ic.disable()
-    
+
+    args.distributed = False
+    if 'WORLD_SIZE' in os.environ:
+        args.distributed = int(os.environ['WORLD_SIZE']) > 1
+
+    if args.distributed:
+        # FOR DISTRIBUTED:  Set the device according to local_rank.
+        torch.cuda.set_device(args.local_rank)
+
+    # FOR DISTRIBUTED:  Initialize the backend.  torch.distributed.launch will provide
+    # environment variables, and requires that you use init_method=`env://`.
+        torch.distributed.init_process_group(backend='nccl',
+                                         init_method='env://')
+
+    torch.backends.cudnn.benchmark = True
+
     trainer = Trainer(data_path=args.data_path,
                       batch_size=args.batch_size,
                       max_epoch=args.max_epoch,
@@ -484,4 +527,5 @@ if __name__ == "__main__":
                       vis_on = args.visualization_on,
                       resume_train = args.resume,
                       work_dir = args.work_dir)
+
     trainer.train()

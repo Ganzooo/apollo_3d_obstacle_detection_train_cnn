@@ -6,9 +6,10 @@ from pathlib import Path
 import numpy as np
 from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
+import torch
 
 
-def load_dataset(data_path, batch_size):
+def load_dataset(data_path, batch_size, distributed):
     """Load training and validation dataset.
 
     Parameters
@@ -36,10 +37,16 @@ def load_dataset(data_path, batch_size):
     print("val-size",val_size)
     train_dataset, val_dataset = random_split(nusc, [train_size, val_size])
 
+    train_sampler = None
+    val_sampler = None
+    if distributed:
+        train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
+        val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
+
     train_dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
+        train_dataset, batch_size=batch_size, shuffle=False)
     val_dataloader = DataLoader(
-        val_dataset, batch_size=1, shuffle=False, num_workers=1)
+        val_dataset, batch_size=1, shuffle=False)
 
     return train_dataloader, val_dataloader
 
