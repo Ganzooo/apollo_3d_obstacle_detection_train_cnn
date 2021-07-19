@@ -1,7 +1,7 @@
 # Static shape
-./trtexec --explicitBatch \
-          --onnx=./bin/bcnn_latestmodel_0628.onnx \
+./bin/trtexec --explicitBatch \
+          --onnx=./bin/bcnn_bestmodel_0712_mid_new.onnx \
           --verbose=true \
           --workspace=4096 \
           --fp16 \
-          --saveEngine=./bin/bcnn_latestmodel_0628.engine
+          --saveEngine=./bin/bcnn_bestmodel_0712_mid_new.engine

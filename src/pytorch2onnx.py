@@ -6,8 +6,12 @@ import os.path
 
 from torch.autograd import Variable
 import torch.onnx
+import sys
+import os
+import os.path as osp
+sys.path.append(osp.dirname(osp.dirname(osp.abspath(__file__))))
 
-from BCNN import BCNN
+from models.BCNN import BCNN
 from collections import OrderedDict
 
 
@@ -26,7 +30,7 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--trained_model', '-tm', type=str,
                         help='trained model',
-                        default='./cur/bcnn/bcnn_latestmodel_0628.pt')
+                        default='../checkpoints/bcnn_bestmodel_0712_mid.pt')
     parser.add_argument('--width', type=int,
                         help='feature map width',
                         default=864)
