@@ -43,10 +43,8 @@ def load_dataset(data_path, batch_size, distributed):
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
         val_sampler = torch.utils.data.distributed.DistributedSampler(val_dataset)
 
-    train_dataloader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=False)
-    val_dataloader = DataLoader(
-        val_dataset, batch_size=1, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,num_workers=16)
+    val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False,num_workers=8)
 
     return train_dataloader, val_dataloader
 

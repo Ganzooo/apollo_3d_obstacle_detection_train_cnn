@@ -11,7 +11,7 @@ class Options():
         parser.add_argument('--data_path', '-dp', type=str, help='Training data path',
                             default='/dataset/nuScenes/FeatureExtracted2/v1.0-mini/')
         parser.add_argument('--batch_size', '-bs', type=int, help='batch size',
-                            default=4)
+                            default=1)
         parser.add_argument('--max_epoch', '-me', type=int, help='max epoch',       
                             default=150)
         parser.add_argument('--pretrained_model', '-p', type=str, help='Pretrained model path',
@@ -33,7 +33,7 @@ class Options():
         parser.add_argument('--loss-scale', type=str, default=None)
         
         ###Log info setting
-        parser.add_argument('--vis_on', type=int, help='vis_on', default=1)
+        parser.add_argument('--vis_on', type=int, help='vis_on', default=0)
         parser.add_argument('--result_dir', type=str, help='Result directory of savem images', default='./result/')
         parser.add_argument('--work_dir', type=str, help='Work directory cur/bcnn', default='./cur/bcnn')
         parser.add_argument('--save_model_interval', type=int, help='Save model interval', default=1)
@@ -41,7 +41,7 @@ class Options():
         
         
         ### Train settings
-        parser.add_argument('--model_type', type=str, help='unet', default='unet')
+        parser.add_argument('--model_type', type=str, help='unet, resnet_unet', default='resnet_unet')
         parser.add_argument('--loss_type', type=str, help='BcnnLoss, BcnnLossNew', default='BcnnLoss')
         parser.add_argument('--train_workers', type=int, help='train_dataloader workers', default=16)
         parser.add_argument('--eval_workers', type=int, help='eval_dataloader workers', default=8)
