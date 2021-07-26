@@ -25,8 +25,7 @@ from models.BCNN import BCNN
 from utils.visualize_utils import get_arrow_image, get_class_image, get_category_or_confidence_image, get_input_feature_image  # noqa
 from utils.utils import get_logger
 from icecream import ic
-
-
+from utils.caffemodel2pytorch import Net
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
@@ -90,6 +89,8 @@ class Trainer(object):
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = BCNN(in_channels=self.in_channels, n_class=5).to(self.device)
+
+        self.model = Net('./checkpoints/apollo/deploy.prototxt', weights = './checkpoints/apollo/deploy.caffemodel')
         self.model = torch.nn.DataParallel(self.model, device_ids=range(torch.cuda.device_count()))  # multi gpu
         self.model.apply(weights_init)
 

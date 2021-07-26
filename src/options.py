@@ -11,12 +11,12 @@ class Options():
         parser.add_argument('--data_path', '-dp', type=str, help='Training data path',
                             default='/dataset/nuScenes/FeatureExtracted2/v1.0-mini/')
         parser.add_argument('--batch_size', '-bs', type=int, help='batch size',
-                            default=1)
+                            default=2)
         parser.add_argument('--max_epoch', '-me', type=int, help='max epoch',       
                             default=150)
         parser.add_argument('--pretrained_model', '-p', type=str, help='Pretrained model path',
-                            #default='/workspace/NETWORK/ketiai_new/camera_lens_glare/checkpoints/glare_bestmodel_26.70_512.pth')
-                            default=None)
+                            default='./checkpoints/apollo_baseline_unet_weight_model.pth')
+                            #default=None)
         parser.add_argument('--width', type=int, help='feature map width',
                             default=864)
         parser.add_argument('--height', type=int, help='feature map height',
@@ -41,13 +41,14 @@ class Options():
         
         
         ### Train settings
-        parser.add_argument('--model_type', type=str, help='unet, resnet_unet', default='resnet_unet')
+        parser.add_argument('--model_type', type=str, help='unet, resnet_unet', default='unet')
         parser.add_argument('--loss_type', type=str, help='BcnnLoss, BcnnLossNew', default='BcnnLoss')
         parser.add_argument('--train_workers', type=int, help='train_dataloader workers', default=16)
         parser.add_argument('--eval_workers', type=int, help='eval_dataloader workers', default=8)
         parser.add_argument('--dataset', type=str, default ='glare_512', help='Dataset type: glare_512, ')
-        parser.add_argument('--optimizer', type=str,  help='optimizer for training adamw, adam, sgd', default ='adam')
+        parser.add_argument('--optimizer', type=str,  help='optimizer for training adamw, adam, sgd', default ='adamw')
         parser.add_argument('--scheduler', type=str,  help='optimizer for training cosine, lambda', default ='cosine')
-        parser.add_argument('--lr_initial', type=float, help='initial learning rate', default=0.0002)
+        parser.add_argument('--lr_initial', type=float, help='initial learning rate', default=0.02)
         parser.add_argument('--weight_decay', type=float, help='weight decay', default=0.001)
+        parser.add_argument('--wandb', type=bool, help='use wandb', default=False)
         return parser

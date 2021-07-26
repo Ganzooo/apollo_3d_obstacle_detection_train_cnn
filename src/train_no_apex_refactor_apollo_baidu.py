@@ -42,7 +42,7 @@ from torch_ema import ExponentialMovingAverage
 #Add wanddb
 import wandb
 os.environ["WANDB_API_KEY"] = "0b0a03cb580e75ef44b4dff7f6f16ce9cfa8a290"
-os.environ["WANDB_MODE"] = "dryrun"
+#os.environ["WANDB_MODE"] = "dryrun"
 
 ######### Set Seeds ###########
 random.seed(1234)
@@ -116,16 +116,11 @@ class Trainer(object):
         ######### Load Pretrained model or Resume train ###########
         if args.pretrained_model is not None:
             ic("Pretrained weight load")
-            checkpoint = torch.load(args.pretrained_model)
-            try:
-                self.model.load_state_dict(checkpoint["model_state"])
-            except:
-                state_dict = checkpoint["state_dict"]
-                new_state_dict = OrderedDict()
-                for k, v in state_dict.items():
-                    name = k[7:] # remove `module.`
-                    new_state_dict[name] = v
-                self.model.load_state_dict(new_state_dict)
+            ic("Pretrained weight from",args.pretrained_model)
+            checkpoint = torch.load(args.pretrained_model,map_location='cpu')
+            self.model.load_state_dict(checkpoint["model_state"])
+            ic(self.model)
+            ic('Initialize with APOLLO Pretrained weight!!!')
 
         if args.resume is not None:
             ic("Loading model and optimizer from checkpoint ")
@@ -156,19 +151,19 @@ class Trainer(object):
         ic("==> Training with learning rate:", self.scheduler.get_last_lr()[0])
 
         # 1. Start a W&B run
-        #if args.wandb:
-        wandb.init(project='3d_Obstacle_Detection', entity='gnzrg25',reinit=True, config={"architecture":args.model_type, "dataset": args.data_path,
-                    "scheduler":args.scheduler, "lr_init":self.scheduler.get_last_lr()[0],
-                    "optim":args.optimizer, "loss":args.loss_type,
-                    "batch_size":args.batch_size, "max_epoch":args.max_epoch,
-                    "weight_decay":args.weight_decay}) 
-    
-        run_name = args.work_dir[6:]               
-        wandb.run.name = run_name
-        wandb.run.save()
-        # 2. Save model inputs and hyperparameters
-        self.config = wandb.config
-        #self.config.update(args)
+        if args.wandb:
+            wandb.init(project='3d_Obstacle_Detection', entity='gnzrg25',reinit=True, config={"architecture":args.model_type, "dataset": args.data_path,
+                        "scheduler":args.scheduler, "lr_init":self.scheduler.get_last_lr()[0],
+                        "optim":args.optimizer, "loss":args.loss_type,
+                        "batch_size":args.batch_size, "max_epoch":args.max_epoch,
+                        "weight_decay":args.weight_decay}) 
+        
+            run_name = args.work_dir[6:]               
+            wandb.run.name = run_name
+            wandb.run.save()
+            # 2. Save model inputs and hyperparameters
+            self.config = wandb.config
+            #self.config.update(args)
 
     def criteria_weight(self, out_feature_gt):
         _out_feature = out_feature_gt.detach().numpy().copy()
@@ -422,16 +417,17 @@ class Trainer(object):
         self.writer.add_scalar("Loss/train/train_avg_height_loss", avg_height_loss, self.epo)
         self.writer.add_scalar("Scheduler/lr_value", float(self.scheduler.get_last_lr()[0]), self.epo)
 
-        wandb.log({"Loss/train/train_avg_loss": avg_loss})
-        wandb.log({"Loss/train/train_avg_confidence_loss": avg_confidence_loss})
-        wandb.log({"Loss/train/train_avg_category_loss": avg_category_loss})
-        wandb.log({"Loss/train/train_avg_class_loss": avg_class_loss})
-        wandb.log({"Loss/train/train_avg_instance_x_loss": avg_instance_x_loss})
-        wandb.log({"Loss/train/train_avg_instance_y_loss": avg_instance_y_loss})
-        wandb.log({"Loss/train/train_avg_heading_x_loss": avg_heading_x_loss})
-        wandb.log({"Loss/train/train_avg_heading_y_loss": avg_heading_y_loss})
-        wandb.log({"Loss/train/train_avg_height_loss": avg_height_loss})
-        wandb.log({"Scheduler/lr_value": float(self.scheduler.get_last_lr()[0])})
+        if args.wandb:
+            wandb.log({"Loss/train/train_avg_loss": avg_loss})
+            wandb.log({"Loss/train/train_avg_confidence_loss": avg_confidence_loss})
+            wandb.log({"Loss/train/train_avg_category_loss": avg_category_loss})
+            wandb.log({"Loss/train/train_avg_class_loss": avg_class_loss})
+            wandb.log({"Loss/train/train_avg_instance_x_loss": avg_instance_x_loss})
+            wandb.log({"Loss/train/train_avg_instance_y_loss": avg_instance_y_loss})
+            wandb.log({"Loss/train/train_avg_heading_x_loss": avg_heading_x_loss})
+            wandb.log({"Loss/train/train_avg_heading_y_loss": avg_heading_y_loss})
+            wandb.log({"Loss/train/train_avg_height_loss": avg_height_loss})
+            wandb.log({"Scheduler/lr_value": float(self.scheduler.get_last_lr()[0])})
 
 
     def step_val(self, mode):
@@ -535,15 +531,16 @@ class Trainer(object):
         self.writer.add_scalar("Loss/val/valid_avg_heading_y_loss", avg_heading_y_loss, self.epo)
         self.writer.add_scalar("Loss/val/valid_avg_height_loss", avg_height_loss, self.epo)
 
-        wandb.log({"Loss/val/val_avg_loss": avg_loss})
-        wandb.log({"Loss/val/val_avg_confidence_loss": avg_confidence_loss})
-        wandb.log({"Loss/val/val_avg_category_loss": avg_category_loss})
-        wandb.log({"Loss/val/val_avg_class_loss": avg_class_loss})
-        wandb.log({"Loss/val/val_avg_instance_x_loss": avg_instance_x_loss})
-        wandb.log({"Loss/val/val_avg_instance_y_loss": avg_instance_y_loss})
-        wandb.log({"Loss/val/val_avg_heading_x_loss": avg_heading_x_loss})
-        wandb.log({"Loss/val/val_avg_heading_y_loss": avg_heading_y_loss})
-        wandb.log({"Loss/val/val_avg_height_loss": avg_height_loss})
+        if args.wandb:
+            wandb.log({"Loss/val/val_avg_loss": avg_loss})
+            wandb.log({"Loss/val/val_avg_confidence_loss": avg_confidence_loss})
+            wandb.log({"Loss/val/val_avg_category_loss": avg_category_loss})
+            wandb.log({"Loss/val/val_avg_class_loss": avg_class_loss})
+            wandb.log({"Loss/val/val_avg_instance_x_loss": avg_instance_x_loss})
+            wandb.log({"Loss/val/val_avg_instance_y_loss": avg_instance_y_loss})
+            wandb.log({"Loss/val/val_avg_heading_x_loss": avg_heading_x_loss})
+            wandb.log({"Loss/val/val_avg_heading_y_loss": avg_heading_y_loss})
+            wandb.log({"Loss/val/val_avg_height_loss": avg_height_loss})
 
     def train(self):
         """Start training."""
