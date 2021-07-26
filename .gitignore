@@ -134,3 +134,13 @@ dmypy.json
 *.pt
 *.engine
 *.npy
+cur/bcnn/glare_bestmodel_968.3511739591273.pth
+*.pth
+*.0
+*.json
+*.yaml
+*.wandb
+/wandb
+*.caffemodel
+*prototxt
+*.metadata
