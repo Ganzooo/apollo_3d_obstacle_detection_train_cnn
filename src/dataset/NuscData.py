@@ -9,7 +9,7 @@ from torchvision import transforms
 import torch
 
 
-def load_dataset(data_path, batch_size, distributed):
+def load_dataset(data_path, test_path, batch_size = 1, distributed = 0):
     """Load training and validation dataset.
 
     Parameters
@@ -25,17 +25,19 @@ def load_dataset(data_path, batch_size, distributed):
     """
     transform = transforms.Compose([
         transforms.ToTensor()])
-    nusc = NuscDataset(data_path, transform)
+    nusc_train_val = NuscDataset(data_path, transform)
+    nusc_test = NuscDataset(test_path, transform)
 
-    train_size = int(0.9 * len(nusc))
-    val_size = len(nusc) - train_size
+    train_size = int(0.9 * len(nusc_train_val))
+    val_size = len(nusc_train_val) - train_size
 
     #Gz
     #train_size = 16790
     #val_size = 1868
     print("train-size",train_size)
     print("val-size",val_size)
-    train_dataset, val_dataset = random_split(nusc, [train_size, val_size])
+    train_dataset, val_dataset = random_split(nusc_train_val, [train_size, val_size])
+    test_dataset = nusc_test
 
     train_sampler = None
     val_sampler = None
@@ -45,8 +47,9 @@ def load_dataset(data_path, batch_size, distributed):
 
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,num_workers=16)
     val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False,num_workers=8)
+    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False,num_workers=8)
 
-    return train_dataloader, val_dataloader
+    return train_dataloader, val_dataloader, test_dataloader
 
 
 def onehot(data, n=5):
@@ -87,11 +90,15 @@ class NuscDataset(Dataset):
 
     """
 
-    def __init__(self, data_path, transform=None):
+    def __init__(self, data_path, transform=None, mode='train'):
         self.data_path = data_path
         self.transform = transform
-        self.in_feature_paths = list(
-            sorted(Path(self.data_path).glob("in_feature/*.npy")))
+        if mode == 'train':
+            self.in_feature_paths = list(sorted(Path(self.data_path).glob("in_feature/*.npy")))
+            print(self.in_feature_paths)
+        else:
+            self.test_feature_paths = list(sorted(Path(self.data_path).glob("in_feature/*.npy")))
+
 
     def __len__(self):
         return len(self.in_feature_paths)

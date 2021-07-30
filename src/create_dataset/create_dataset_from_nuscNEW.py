@@ -269,13 +269,13 @@ if __name__ == '__main__':
 
     parser.add_argument('--dataroot', '-dr', type=str,
                         help='Nuscenes dataroot path',
-                        default='/dataset/nuScenes/v1.0-trainval')
-                        #default='/dataset/nuScenes/v1.0-mini')
+                        #default='/dataset/nuScenes/v1.0-trainval')
+                        default='/dataset/nuScenes/v1.0-mini')
     parser.add_argument('--save_dir', '-sd', type=str,
                         help='Dataset save directory',
                         #default='/dataset/nuScenes/FeatureExtracted/v1.0-trainval')
-                        #default='/dataset/nuScenes/FeatureExtracted2/v1.0-mini')
-                        default='/dataset_sub/nuScenes/FeatureExtracted/v1.0-trainval')
+                        default='/dataset_sub/nuScenes/FeatureExtracted2/v1.0-mini')
+                        #default='/dataset_sub/nuScenes/FeatureExtracted/v1.0-trainval')
     parser.add_argument('--lidar_channel', type=int,
                         help='Lidar channel number: 32, 64, 128',
                         default=128)                        
@@ -290,8 +290,8 @@ if __name__ == '__main__':
                         default=90)
     parser.add_argument('--nusc_version', type=str,
                         help='Nuscenes version. v1.0-mini or v1.0-trainval',
-                        default='v1.0-trainval')
-                        #default='v1.0-mini')
+                        #default='v1.0-trainval')
+                        default='v1.0-mini')
     parser.add_argument('--use_constant_feature', type=int,
                         help='Whether to use constant feature',
                         default=0)
@@ -300,7 +300,7 @@ if __name__ == '__main__':
                         default=0)
     parser.add_argument('--end_id', type=int,
                         help='How many data to generate. If None, all data',
-                        default=None)
+                        default=1)
     parser.add_argument('--augmentation_num', '-an', type=int,
                         help='How many data augmentations for one sample',
                         default=0)

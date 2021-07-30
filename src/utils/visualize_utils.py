@@ -80,7 +80,7 @@ def get_category_or_confidence_image(feature, height, width, thresh=0.3):
     img = img.transpose(2, 0, 1)
     return img
 
-def get_class_image(feature, height, width):
+def get_class_image(feature, height, width, category_img):
     """Visualize class feature.
     Parameters
     ----------
@@ -98,8 +98,16 @@ def get_class_image(feature, height, width):
     bus_idx = np.where(feature_np[:, :, 0] == 2)
     bike_idx = np.where(feature_np[:, :, 0] == 3)
     human_idx = np.where(feature_np[:, :, 0] == 4)
-    unknown = np.where(feature_np[:, :, 0] == 5)
+    cate = category_img[0,:,:]
+    unknown = np.where((feature_np[:, :, 0] == 5) & cate)
     img = np.zeros((height, width, 3))
+
+    # idx = np.where(feature_np[..., 0] > thresh)
+    # img[idx] = 1.0
+    #unknown = cv2.bitwise_and(unknown, category_img.transpose(1,2,0))
+    # img[:,:,0] = cv2.bitwise_and(img[:,:,0], category_img.transpose(1,2,0))
+    # img[:,:,1] = cv2.bitwise_and(img[:,:,1], category_img.transpose(1,2,0))
+    # img[:,:,2] = cv2.bitwise_and(img[:,:,2], category_img.transpose(1,2,0))
     img[car_idx] = [255, 0, 0]
     img[bus_idx] = [0, 255, 0]
     img[bike_idx] = [0, 0, 255]
@@ -182,6 +190,9 @@ def get_arrow_image(in_feature, out_feature, width=864, height=864,
         for j_tmp in range(int(width * viz_range)):
             i = int(height / 2 - height * viz_range / 2 + i_tmp)
             j = int(width / 2 - width * viz_range / 2 + j_tmp)
+            i = i_tmp
+            j = j_tmp
+
             #Gz test
             #if in_feature[i, j, 5] == 1:
             # if in_feature[i, j, 3] == 1:

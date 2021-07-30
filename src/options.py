@@ -10,12 +10,16 @@ class Options():
         ### General settings:
         parser.add_argument('--data_path', '-dp', type=str, help='Training data path',
                             default='/dataset/nuScenes/FeatureExtracted2/v1.0-mini/')
+        parser.add_argument('--test_path', type=str, help='Training data path',
+                            default='/dataset_sub/nuScenes/FeatureExtracted2/test/')
         parser.add_argument('--batch_size', '-bs', type=int, help='batch size',
-                            default=2)
+                            default=1)
         parser.add_argument('--max_epoch', '-me', type=int, help='max epoch',       
                             default=150)
         parser.add_argument('--pretrained_model', '-p', type=str, help='Pretrained model path',
                             default='./checkpoints/apollo_baseline_unet_weight_model.pth')
+                            #default='./checkpoints/best_UNET/unet_last_train_280.pth')
+                            #default='./checkpoints/best_Resnet_UNET/resnet_unet_bestmodel_val_631.pth')
                             #default=None)
         parser.add_argument('--width', type=int, help='feature map width',
                             default=864)
@@ -48,7 +52,7 @@ class Options():
         parser.add_argument('--dataset', type=str, default ='glare_512', help='Dataset type: glare_512, ')
         parser.add_argument('--optimizer', type=str,  help='optimizer for training adamw, adam, sgd', default ='adamw')
         parser.add_argument('--scheduler', type=str,  help='optimizer for training cosine, lambda', default ='cosine')
-        parser.add_argument('--lr_initial', type=float, help='initial learning rate', default=0.02)
+        parser.add_argument('--lr_initial', type=float, help='initial learning rate', default=0.0002)
         parser.add_argument('--weight_decay', type=float, help='weight decay', default=0.001)
         parser.add_argument('--wandb', type=bool, help='use wandb', default=False)
         return parser

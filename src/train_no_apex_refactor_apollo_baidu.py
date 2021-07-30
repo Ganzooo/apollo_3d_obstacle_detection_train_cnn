@@ -64,7 +64,7 @@ class Trainer(object):
         self.height=args.height,
         self.resume_train = args.resume,
         self.work_dir = args.work_dir,
-        self.train_dataloader, self.val_dataloader = load_dataset(args.data_path, args.batch_size, args.distributed)
+        self.train_dataloader, self.val_dataloader, self.test_dataloader = load_dataset(args.data_path, args.test_path, args.batch_size, args.distributed)
         self.max_epoch = args.max_epoch
         self.time_now = datetime.now().strftime('%Y%m%d_%H%M')
         self.width = args.width
@@ -113,6 +113,9 @@ class Trainer(object):
         elif args.optimizer == 'sgd':
             self.optimizer = optim.SGD(self.model.parameters(), lr=args.lr_initial, momentum=0.9)
          
+        ######### Loss ###########
+        self.criterion = get_loss_function('BcnnLoss').to(self.device) 
+
         ######### Load Pretrained model or Resume train ###########
         if args.pretrained_model is not None:
             ic("Pretrained weight load")
@@ -204,8 +207,8 @@ class Trainer(object):
         confidence_gt_img = out_feature_gt[0, 3:4, ...].cpu().detach().numpy().copy()
         category_img = get_category_or_confidence_image(output[0, 0:1, :, :],self.height, self.width, thresh=0.3)
         confidence_img = get_category_or_confidence_image(output[0, 3:4, :, :],self.height, self.width, thresh=0.3)
-        label_img = get_class_image(out_feature_gt[0, 4:10, ...],self.height, self.width)
-        pred_class_img = get_class_image(output[0, 4:10, ...],self.height, self.width)
+        label_img = get_class_image(out_feature_gt[0, 4:10, ...],self.height, self.width, category_img)
+        pred_class_img = get_class_image(output[0, 4:10, ...],self.height, self.width, category_img)
         in_feature_img = in_feature[0,self.non_empty_channle:self.non_empty_channle+1,...].cpu().detach().numpy().copy()
         in_feature_img[in_feature_img > 0] = 255
 
@@ -214,7 +217,7 @@ class Trainer(object):
         heading_gt_image = None
         heading_image = None
         if np.mod(index, len(dataloader) - 1) == 0 and index != 0:
-        #if index != 0:
+        #if index >= 0:
             instance_gt_image = get_arrow_image(
                 in_feature[0, ...].cpu().detach().numpy().transpose(1, 2, 0),
                 out_feature_gt[0, ...].cpu().detach().numpy().transpose(1, 2, 0),
@@ -321,9 +324,6 @@ class Trainer(object):
         heading_x_loss_sum = 0
         heading_y_loss_sum = 0
         height_loss_sum = 0
-
-        ######### Loss ###########
-        criterion = get_loss_function('BcnnLoss').to(self.device)        
         
         for index, (in_feature, out_feature_gt) in tqdm.tqdm(enumerate(self.train_dataloader), total=len(self.train_dataloader)):
             iter += 1
@@ -337,7 +337,7 @@ class Trainer(object):
             output = self.model(in_feature)
         
             (category_loss, confidence_loss, class_loss, instance_x_loss, instance_y_loss, heading_x_loss, heading_y_loss, height_loss) \
-                = criterion(output, in_feature, out_feature_gt, category_weight, confidence_weight, class_weight)
+                = self.criterion(output, in_feature, out_feature_gt, category_weight, confidence_weight, class_weight)
 
             loss = category_loss + confidence_loss + class_loss + (instance_x_loss + instance_y_loss
                    + heading_x_loss + heading_y_loss) * 1.0 + height_loss
@@ -447,9 +447,6 @@ class Trainer(object):
         heading_y_loss_sum = 0
         height_loss_sum = 0
 
-        ######### Loss ###########
-        criterion = get_loss_function('BcnnLoss').to(self.device)  
-
         for index, (in_feature, out_feature_gt) in tqdm.tqdm(enumerate(self.val_dataloader), total=len(self.val_dataloader)):
             category_weight, confidence_weight, class_weight = self.criteria_weight(out_feature_gt)
 
@@ -461,7 +458,7 @@ class Trainer(object):
                 output = self.model(in_feature)
                 
             (category_loss, confidence_loss, class_loss, instance_x_loss, instance_y_loss, heading_x_loss, heading_y_loss, height_loss) \
-                = criterion(output, in_feature, out_feature_gt, category_weight, confidence_weight, class_weight)
+                = self.criterion(output, in_feature, out_feature_gt, category_weight, confidence_weight, class_weight)
 
             loss_for_record = category_loss + confidence_loss \
                 + class_loss + instance_x_loss + instance_y_loss \
@@ -541,6 +538,101 @@ class Trainer(object):
             wandb.log({"Loss/val/val_avg_heading_x_loss": avg_heading_x_loss})
             wandb.log({"Loss/val/val_avg_heading_y_loss": avg_heading_y_loss})
             wandb.log({"Loss/val/val_avg_height_loss": avg_height_loss})
+    
+    def test(self, mode):
+        self.model.eval()
+        #ic('Start {} -> epoch: {}'.format(mode,self.epo))
+        self.best_test = False
+        self.epo = 0
+
+        loss_sum = 0
+        category_loss_sum = 0
+        confidence_loss_sum = 0
+        class_loss_sum = 0
+        instance_x_loss_sum = 0
+        instance_y_loss_sum = 0
+        heading_x_loss_sum = 0
+        heading_y_loss_sum = 0
+        height_loss_sum = 0
+
+        for index, (in_feature, out_feature_gt) in tqdm.tqdm(enumerate(self.test_dataloader), total=len(self.test_dataloader)):
+            category_weight, confidence_weight, class_weight = self.criteria_weight(out_feature_gt)
+
+            in_feature = in_feature.to(self.device)
+            out_feature_gt = out_feature_gt.to(self.device)
+
+            with torch.no_grad():
+                ###Pred image ###
+                output = self.model(in_feature)
+                
+            (category_loss, confidence_loss, class_loss, instance_x_loss, instance_y_loss, heading_x_loss, heading_y_loss, height_loss) \
+                = self.criterion(output, in_feature, out_feature_gt, category_weight, confidence_weight, class_weight)
+
+            loss_for_record = category_loss + confidence_loss \
+                + class_loss + instance_x_loss + instance_y_loss \
+                + heading_x_loss + heading_y_loss + height_loss
+            iter_loss = loss_for_record.item()
+            loss_sum += iter_loss
+            category_loss_sum += category_loss.item()
+            confidence_loss_sum += confidence_loss.item()
+            class_loss_sum += class_loss.item()
+            instance_x_loss_sum += instance_x_loss.item()
+            instance_y_loss_sum += instance_y_loss.item()
+            heading_x_loss_sum += heading_x_loss.item()
+            heading_y_loss_sum += heading_y_loss.item()
+            height_loss_sum += height_loss.item()
+
+            if self.vis_on and np.mod(index, self.vis_interval) == 0:
+                self.result_visualization(out_feature_gt, output, in_feature, index, mode, self.test_dataloader)
+
+        ### Print result of Loss Value###
+        if len(self.test_dataloader) > 0:
+            avg_loss = loss_sum / len(self.test_dataloader)
+            avg_confidence_loss = confidence_loss_sum / len(self.test_dataloader)
+            avg_category_loss = category_loss_sum / len(self.test_dataloader)
+            avg_class_loss = class_loss_sum / len(self.test_dataloader)
+            avg_instance_x_loss = instance_x_loss_sum / len(self.test_dataloader)
+            avg_instance_y_loss = instance_y_loss_sum / len(self.test_dataloader)
+            avg_heading_x_loss = heading_x_loss_sum / len(self.test_dataloader)
+            avg_heading_y_loss = heading_y_loss_sum / len(self.test_dataloader)
+            avg_height_loss = height_loss_sum / len(self.test_dataloader)
+        else:
+            avg_loss = loss_sum
+            avg_confidence_loss = confidence_loss_sum
+            avg_category_loss = category_loss_sum
+            avg_class_loss = class_loss_sum
+            avg_instance_x_loss = instance_x_loss_sum
+            avg_instance_y_loss = instance_y_loss_sum
+            avg_heading_x_loss = heading_x_loss_sum
+            avg_heading_y_loss = heading_y_loss_sum
+            avg_height_loss = height_loss_sum
+
+        format_str = "epoch: {}\n total loss: {:3f}, category_loss: {:.3f}, confidence_loss: {:.3f}, class_loss:{:.3f}, instace_x_loss:{:.3f}, instace_y_loss={:.3f}, heading_x_loss={:.3f}, heading_y_loss={:.3f}, height_loss={:.3f}, learning_rate={}"
+        print_str = format_str.format(int(self.epo) ,float(avg_loss),float(avg_category_loss),float(avg_confidence_loss),float(avg_class_loss), \
+                float(avg_instance_x_loss), float(avg_instance_y_loss), float(avg_heading_x_loss), float(avg_heading_y_loss), float(avg_height_loss), float(self.scheduler.get_last_lr()[0]))
+        ic(print_str)
+        self.logger.info(print_str)
+
+        self.writer.add_scalar("Loss/val/valid_avg_loss", avg_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_confidence_loss", avg_confidence_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_category_loss", avg_category_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_class_loss", avg_class_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_instance_x_loss", avg_instance_x_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_instance_y_loss", avg_instance_y_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_heading_x_loss", avg_heading_x_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_heading_y_loss", avg_heading_y_loss, self.epo)
+        self.writer.add_scalar("Loss/val/valid_avg_height_loss", avg_height_loss, self.epo)
+
+        if args.wandb:
+            wandb.log({"Loss/val/val_avg_loss": avg_loss})
+            wandb.log({"Loss/val/val_avg_confidence_loss": avg_confidence_loss})
+            wandb.log({"Loss/val/val_avg_category_loss": avg_category_loss})
+            wandb.log({"Loss/val/val_avg_class_loss": avg_class_loss})
+            wandb.log({"Loss/val/val_avg_instance_x_loss": avg_instance_x_loss})
+            wandb.log({"Loss/val/val_avg_instance_y_loss": avg_instance_y_loss})
+            wandb.log({"Loss/val/val_avg_heading_x_loss": avg_heading_x_loss})
+            wandb.log({"Loss/val/val_avg_heading_y_loss": avg_heading_y_loss})
+            wandb.log({"Loss/val/val_avg_height_loss": avg_height_loss})
 
     def train(self):
         """Start training."""
@@ -565,4 +657,5 @@ if __name__ == "__main__":
     #ic.disable()
     
     trainer = Trainer(args=args, logger=logger, writer=writer)
-    trainer.train()
+    #trainer.train()
+    trainer.test('test')

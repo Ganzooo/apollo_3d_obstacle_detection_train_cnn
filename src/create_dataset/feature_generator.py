@@ -282,10 +282,8 @@ class OutputFeatureGenerator():
         elif num_points < 4 and label == 4:
             return out_feature
 
-        for i in range(
-                search_area_right_idx - 1, search_area_left_idx + 1):
-            for j in range(
-                    search_area_top_idx - 1, search_area_bottom_idx + 1):
+        for i in range(search_area_right_idx - 1, search_area_left_idx + 1):
+            for j in range(search_area_top_idx - 1, search_area_bottom_idx + 1):
                 if 0 <= i and i < size and 0 <= j and j < size:
                     grid_center_x = Pixel2pc(i, float(size), self.grid_range)
                     grid_center_y = Pixel2pc(j, float(size), self.grid_range)
