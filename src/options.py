@@ -53,6 +53,6 @@ class Options():
         parser.add_argument('--optimizer', type=str,  help='optimizer for training adamw, adam, sgd', default ='adamw')
         parser.add_argument('--scheduler', type=str,  help='optimizer for training cosine, lambda', default ='cosine')
         parser.add_argument('--lr_initial', type=float, help='initial learning rate', default=0.0002)
-        parser.add_argument('--weight_decay', type=float, help='weight decay', default=0.001)
+        parser.add_argument('--weight_decay', type=float, help='weight decay', default=0.0)
         parser.add_argument('--wandb', type=bool, help='use wandb', default=False)
         return parser
