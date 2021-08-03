@@ -42,7 +42,7 @@ class Options():
         parser.add_argument('--work_dir', type=str, help='Work directory cur/bcnn', default='./cur/bcnn')
         parser.add_argument('--save_model_interval', type=int, help='Save model interval', default=1)
         parser.add_argument('--loss_print_interval', type=int, help='Loss print interval', default=1)
-        
+    
         
         ### Train settings
         parser.add_argument('--model_type', type=str, help='unet, resnet_unet', default='unet')
